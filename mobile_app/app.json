@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "ChillTrack",
+    "slug": "chilltrack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.smartrefrigerator.app"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "replace-this-with-your-project-id"
+      }
+    }
+  }
+}
