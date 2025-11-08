@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/icon.png",
       "resizeMode": "contain",
@@ -13,16 +14,17 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.smartrefrigerator.app"
+    },
     "android": {
       "package": "com.smartrefrigerator.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
-      }
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.smartrefrigerator.app"
+      },
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/icon.png"
@@ -32,6 +34,6 @@
       "eas": {
         "projectId": "replace-this-with-your-project-id"
       }
-    }
+    },
   }
 }
