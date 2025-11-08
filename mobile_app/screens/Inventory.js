@@ -7,6 +7,7 @@ import {
   TouchableOpacity, 
   ActivityIndicator,
   TextInput,
+  SafeAreaView,
 } from "react-native";
 import { getInventory } from "../api";
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from "../theme";
@@ -24,13 +25,18 @@ export default function Inventory({ navigation }) {
       setLoading(true);
       console.log("📦 Fetching inventory...");
       const data = await getInventory();
-      console.log("✅ Inventory loaded:", data?.length || 0, "items");
-      console.log("📋 First item:", data?.[0]);
-      setItems(data || []);
-      setFilteredItems(data || []);
+      // Ensure data is an array
+      const safeData = Array.isArray(data) ? data : [];
+      console.log("✅ Inventory loaded:", safeData.length, "items");
+      if (safeData.length > 0) {
+        console.log("📋 First item:", safeData[0]);
+      }
+      setItems(safeData);
+      setFilteredItems(safeData);
     } catch (error) {
       console.error("❌ Error fetching inventory:", error);
-      console.error("Error details:", error.message);
+      console.error("Error details:", error?.message || 'Unknown error');
+      // Set empty arrays on error
       setItems([]);
       setFilteredItems([]);
     } finally {
@@ -54,19 +60,20 @@ export default function Inventory({ navigation }) {
   }, [searchQuery, selectedCategory, items]);
 
   const filterItems = () => {
-    let filtered = items;
+    // Ensure items is an array
+    let filtered = Array.isArray(items) ? items : [];
 
     // Filter by category
     if (selectedCategory !== 'All') {
       filtered = filtered.filter(item => 
-        (item.category || 'Other') === selectedCategory
+        (item?.category || 'Other') === selectedCategory
       );
     }
 
     // Filter by search query
-    if (searchQuery) {
+    if (searchQuery && searchQuery.trim()) {
       filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+        item?.name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -74,12 +81,16 @@ export default function Inventory({ navigation }) {
   };
 
   const getCategories = () => {
-    const cats = ['All', ...new Set(items.map(item => item.category || 'Other'))];
+    if (!Array.isArray(items) || items.length === 0) {
+      return ['All'];
+    }
+    const cats = ['All', ...new Set(items.map(item => item?.category || 'Other'))];
     return cats;
   };
 
   const getStatusColor = (item) => {
-    const quantity = item.quantity;
+    if (!item) return colors.textSecondary;
+    const quantity = item.quantity || 0;
     const status = item.status?.toLowerCase() || '';
 
     if (status.includes('low') || status.includes('expir') || quantity <= 2) {
@@ -92,8 +103,9 @@ export default function Inventory({ navigation }) {
   };
 
   const getQuantityDisplay = (item) => {
-    const qty = item.quantity;
-    const name = item.name.toLowerCase();
+    if (!item) return '0 units';
+    const qty = item.quantity || 0;
+    const name = (item.name || '').toLowerCase();
 
     if (name.includes('milk') || name.includes('juice') || name.includes('yogurt')) {
       return qty > 1 ? `${qty} bottles` : `${qty} bottle`;
@@ -108,6 +120,9 @@ export default function Inventory({ navigation }) {
   };
 
   const renderItem = ({ item, index }) => {
+    if (!item || !item.name) {
+      return null; // Skip invalid items
+    }
     console.log(`Rendering item ${index}:`, item.name);
     return (
       <TouchableOpacity
@@ -119,11 +134,11 @@ export default function Inventory({ navigation }) {
         activeOpacity={0.7}
       >
         <View style={styles.itemIcon}>
-          <Text style={styles.itemEmoji}>{getIngredientEmoji(item.name)}</Text>
+          <Text style={styles.itemEmoji}>{getIngredientEmoji(item.name || '')}</Text>
         </View>
         
         <View style={styles.itemDetails}>
-          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemName}>{item.name || 'Unknown'}</Text>
           <Text style={styles.itemQuantity}>{getQuantityDisplay(item)}</Text>
           <Text style={styles.itemCategory}>{item.category || 'Other'}</Text>
         </View>
@@ -142,7 +157,7 @@ export default function Inventory({ navigation }) {
   console.log("🏷️ Selected category:", selectedCategory);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Text style={styles.searchIcon}>🔍</Text>
@@ -230,7 +245,7 @@ export default function Inventory({ navigation }) {
       >
         <Text style={styles.addButtonIcon}>+</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 

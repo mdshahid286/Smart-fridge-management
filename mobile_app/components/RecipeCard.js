@@ -10,17 +10,28 @@ export default function RecipeCard({ recipe, onPress }) {
     return colors.error;
   };
 
-  const displayIngredients = recipe.ingredients.slice(0, 4);
+  const displayIngredients = Array.isArray(recipe.ingredients) 
+    ? recipe.ingredients.slice(0, 4) 
+    : [];
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       {/* Recipe Image */}
       <View style={styles.imageContainer}>
-        <Image 
-          source={{ uri: recipe.image }} 
-          style={styles.image}
-          defaultSource={require('../assets/icon.png')}
-        />
+        {recipe.image ? (
+          <Image 
+            source={{ uri: recipe.image }} 
+            style={styles.image}
+            defaultSource={require('../assets/icon.png')}
+            onError={() => {
+              console.warn('Failed to load recipe image:', recipe.image);
+            }}
+          />
+        ) : (
+          <View style={[styles.image, { backgroundColor: colors.borderLight, justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ fontSize: 48 }}>🍳</Text>
+          </View>
+        )}
         {recipe.matchPercentage !== undefined && (
           <View style={[styles.matchBadge, { backgroundColor: getMatchColor() }]}>
             <Text style={styles.matchText}>{recipe.matchPercentage}%</Text>
@@ -31,17 +42,17 @@ export default function RecipeCard({ recipe, onPress }) {
       {/* Recipe Details */}
       <View style={styles.content}>
         <Text style={styles.recipeName} numberOfLines={2}>
-          {recipe.name}
+          {recipe.name || 'Unknown Recipe'}
         </Text>
 
         {/* Ingredients Icons */}
         <View style={styles.ingredientsRow}>
           {displayIngredients.map((ingredient, index) => (
             <Text key={index} style={styles.ingredientEmoji}>
-              {getIngredientEmoji(ingredient)}
+              {getIngredientEmoji(ingredient || '')}
             </Text>
           ))}
-          {recipe.ingredients.length > 4 && (
+          {Array.isArray(recipe.ingredients) && recipe.ingredients.length > 4 && (
             <Text style={styles.moreIngredients}>
               +{recipe.ingredients.length - 4}
             </Text>
@@ -52,7 +63,7 @@ export default function RecipeCard({ recipe, onPress }) {
         <View style={styles.footer}>
           <View style={styles.timeContainer}>
             <Text style={styles.timeIcon}>⏱️</Text>
-            <Text style={styles.timeText}>{recipe.time}</Text>
+            <Text style={styles.timeText}>{recipe.time || 'N/A'}</Text>
           </View>
           {recipe.missingIngredients && recipe.missingIngredients.length > 0 && (
             <View style={styles.missingContainer}>

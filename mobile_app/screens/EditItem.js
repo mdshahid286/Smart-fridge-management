@@ -6,15 +6,19 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ScrollView,
+  SafeAreaView,
 } from "react-native";
-import { API_URL, updateInventoryItem } from "../api";
+import { colors, spacing, fontSize, fontWeight, borderRadius } from "../theme";
+import { updateInventoryItem } from "../api";
 
 export default function EditItem({ route, navigation }) {
-  const { item } = route.params; // item passed from Inventory.js
+  // Safe access to route params with defaults
+  const item = route?.params?.item || { name: '', quantity: 1, status: 'In Stock' };
 
-  const [name, setName] = useState(item.name);
-  const [quantity, setQuantity] = useState(item.quantity.toString());
-  const [status, setStatus] = useState(item.status);
+  const [name, setName] = useState(item?.name || '');
+  const [quantity, setQuantity] = useState(item?.quantity?.toString() || '1');
+  const [status, setStatus] = useState(item?.status || 'In Stock');
 
   const handleSave = async () => {
     // Validation
@@ -46,7 +50,8 @@ export default function EditItem({ route, navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
       <Text style={styles.title}>Edit Item</Text>
 
       <Text style={styles.label}>Item Name</Text>
@@ -76,44 +81,54 @@ export default function EditItem({ route, navigation }) {
       <TouchableOpacity style={styles.button} onPress={handleSave}>
         <Text style={styles.buttonText}>💾 Save Changes</Text>
       </TouchableOpacity>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 25,
-    backgroundColor: "#fff",
+    backgroundColor: colors.backgroundSolid,
+  },
+  scrollContent: {
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.bold,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: spacing.xl,
+    color: colors.textPrimary,
   },
   label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 15,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    color: colors.textPrimary,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 5,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.xs,
+    backgroundColor: colors.cardSolid,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
   },
   button: {
-    backgroundColor: "#2196F3",
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 30,
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.xl,
     alignItems: "center",
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: colors.textWhite,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
   },
 });

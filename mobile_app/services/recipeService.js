@@ -244,8 +244,14 @@ export const getMissingIngredients = (recipe, inventory) => {
  * Get ingredient emoji based on name
  */
 export const getIngredientEmoji = (ingredient) => {
+  if (!ingredient || typeof ingredient !== 'string') {
+    return '🔸';
+  }
+  
+  const ingredientLower = ingredient.toLowerCase().trim();
   const emojiMap = {
     tomato: '🍅',
+    tomatoes: '🍅',
     mozzarella: '🧀',
     basil: '🌿',
     'olive oil': '🫒',
@@ -260,18 +266,24 @@ export const getIngredientEmoji = (ingredient) => {
     beef: '🥩',
     tortilla: '🌮',
     onion: '🧅',
+    onions: '🧅',
     cheese: '🧀',
     cucumber: '🥒',
+    cucumbers: '🥒',
     feta: '🧀',
     olive: '🫒',
+    olives: '🫒',
     eggs: '🥚',
+    egg: '🥚',
     milk: '🥛',
     butter: '🧈',
     apples: '🍎',
+    apple: '🍎',
     flour: '🌾',
     sugar: '🍬',
     cinnamon: '🥄',
     carrots: '🥕',
+    carrot: '🥕',
     'vegetable stock': '🥣',
     cream: '🥛',
     lettuce: '🥬',
@@ -282,9 +294,34 @@ export const getIngredientEmoji = (ingredient) => {
     granola: '🥣',
     berries: '🫐',
     honey: '🍯',
+    // Additional common items
+    banana: '🍌',
+    bananas: '🍌',
+    orange: '🍊',
+    oranges: '🍊',
+    broccoli: '🥦',
+    potato: '🥔',
+    potatoes: '🥔',
+    rice: '🍚',
+    pasta: '🍝',
+    fish: '🐟',
+    pork: '🥓',
+    turkey: '🦃',
   };
 
-  return emojiMap[ingredient.toLowerCase()] || '🔸';
+  // Check exact match first
+  if (emojiMap[ingredientLower]) {
+    return emojiMap[ingredientLower];
+  }
+  
+  // Check if any key contains the ingredient or vice versa
+  for (const key in emojiMap) {
+    if (ingredientLower.includes(key) || key.includes(ingredientLower)) {
+      return emojiMap[key];
+    }
+  }
+
+  return '🔸';
 };
 
 /**

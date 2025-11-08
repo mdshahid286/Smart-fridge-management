@@ -23,7 +23,7 @@ const USE_ANDROID_EMULATOR = false; // false for Expo Go physical device, true f
 
 export const API_URL = USE_ANDROID_EMULATOR 
   ? "http://10.0.2.2:5000"  // Android Emulator special IP
-  : "http:// 10.79.192.126:5000"; // Your machine's IP for Expo Go physical device
+  : "http://10.79.192.126:5000"; // Your machine's IP for Expo Go physical device
 
 // 🧪 Test Backend Connection
 export const testConnection = async () => {
@@ -37,14 +37,19 @@ export const testConnection = async () => {
       timeout: 5000,
     });
     console.log("✅ Backend connection successful:", response.data);
-    return response.data;
+    return response.data || { message: "Connected", status: "ok" };
   } catch (error) {
     console.error("❌ Backend connection failed:", {
       message: error.message,
       code: error.code,
       url: API_URL,
     });
-    throw error;
+    // Don't throw - return error status instead
+    return { 
+      message: "Connection failed", 
+      status: "error",
+      error: error.message 
+    };
   }
 };
 
@@ -140,24 +145,46 @@ export const getInventory = async () => {
     console.log("📦 Returning mock inventory data");
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 500));
-    return [...MOCK_INVENTORY];
+    return Array.isArray(MOCK_INVENTORY) ? [...MOCK_INVENTORY] : [];
   }
   
   try {
-    const response = await axios.get(`${API_URL}/inventory`);
-    return response.data;
+    const response = await axios.get(`${API_URL}/inventory`, {
+      timeout: 10000,
+    });
+    // Ensure we return an array
+    return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     console.error("❌ Fetch Inventory Error:", error.message);
-    throw error;
+    // Return empty array instead of throwing to prevent app crashes
+    console.warn("⚠️ Falling back to empty inventory");
+    return [];
   }
 };
 
 // ➕ Add New Item
 export const addInventoryItem = async (item) => {
+  if (USE_MOCK_DATA) {
+    console.log("📦 Mock mode - item would be added");
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { message: "Item added (mock mode)", item };
+  }
+  
   try {
-    const response = await axios.post(`${API_URL}/inventory`, item, {
-      headers: { "Content-Type": "application/json" },
-    });
+    // Try /add_item endpoint first (if available)
+    let response;
+    try {
+      response = await axios.post(`${API_URL}/add_item`, item, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000,
+      });
+    } catch (e) {
+      // Fallback to POST /inventory if /add_item doesn't exist
+      response = await axios.post(`${API_URL}/inventory`, item, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000,
+      });
+    }
     return response.data;
   } catch (error) {
     console.error("❌ Add Item Error:", error.message);
@@ -167,9 +194,16 @@ export const addInventoryItem = async (item) => {
 
 // ✏️ Update Existing Item
 export const updateInventoryItem = async (item) => {
+  if (USE_MOCK_DATA) {
+    console.log("📦 Mock mode - item would be updated");
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { message: "Item updated (mock mode)", item };
+  }
+  
   try {
     const response = await axios.put(`${API_URL}/inventory`, item, {
       headers: { "Content-Type": "application/json" },
+      timeout: 10000,
     });
     return response.data;
   } catch (error) {
@@ -180,9 +214,16 @@ export const updateInventoryItem = async (item) => {
 
 // ❌ Delete Item
 export const deleteInventoryItem = async (name) => {
+  if (USE_MOCK_DATA) {
+    console.log("📦 Mock mode - item would be deleted");
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { message: "Item deleted (mock mode)" };
+  }
+  
   try {
     const response = await axios.delete(`${API_URL}/inventory`, {
       params: { name },
+      timeout: 10000,
     });
     return response.data;
   } catch (error) {

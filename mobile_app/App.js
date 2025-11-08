@@ -4,6 +4,8 @@ import { Text, View, StatusBar, Platform } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { colors } from "./theme";
 
 // Screens
@@ -89,12 +91,14 @@ function InventoryStack() {
 // Main Tab Navigator
 export default function App() {
   return (
-    <NavigationContainer>
-      <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor="#E2E8F0"
-        translucent={false}
-      />
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <StatusBar 
+            barStyle="dark-content" 
+            backgroundColor="#E2E8F0"
+            translucent={false}
+          />
       <Tab.Navigator
         screenOptions={{
           tabBarActiveTintColor: colors.primary,
@@ -316,6 +320,8 @@ export default function App() {
           }}
         />
       </Tab.Navigator>
-    </NavigationContainer>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   Image,
+  SafeAreaView,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../theme';
 import { getInventory } from '../api';
@@ -32,15 +33,19 @@ export default function Recipes({ navigation }) {
     try {
       setLoading(true);
       const items = await getInventory();
-      setInventory(items);
+      const safeItems = Array.isArray(items) ? items : [];
+      setInventory(safeItems);
       
-      const recommended = getRecommendedRecipes(items, 30);
-      setRecommendedRecipes(recommended);
+      const recommended = getRecommendedRecipes(safeItems, 30);
+      setRecommendedRecipes(Array.isArray(recommended) ? recommended : []);
 
-      const all = getAllRecipes(items);
-      setAllRecipes(all);
+      const all = getAllRecipes(safeItems);
+      setAllRecipes(Array.isArray(all) ? all : []);
     } catch (error) {
       console.error('Error fetching data:', error);
+      setInventory([]);
+      setRecommendedRecipes([]);
+      setAllRecipes([]);
     } finally {
       setLoading(false);
     }
@@ -66,8 +71,9 @@ export default function Recipes({ navigation }) {
   };
 
   const renderInventoryItem = (item, index) => {
-    const name = typeof item === 'object' ? item.name : item;
-    const quantity = typeof item === 'object' ? item.quantity : 1;
+    if (!item) return null;
+    const name = typeof item === 'object' ? (item.name || 'Unknown') : (item || 'Unknown');
+    const quantity = typeof item === 'object' ? (item.quantity || 0) : 1;
     const statusColor = getInventoryStatusColor(item);
 
     return (
@@ -100,10 +106,17 @@ export default function Recipes({ navigation }) {
           <View style={styles.modalContent}>
             <ScrollView>
               {/* Recipe Image */}
-              <Image 
-                source={{ uri: selectedRecipe.image }} 
-                style={styles.modalImage}
-              />
+              {selectedRecipe.image ? (
+                <Image 
+                  source={{ uri: selectedRecipe.image }} 
+                  style={styles.modalImage}
+                  onError={() => console.warn('Failed to load recipe image')}
+                />
+              ) : (
+                <View style={[styles.modalImage, { backgroundColor: colors.borderLight, justifyContent: 'center', alignItems: 'center' }]}>
+                  <Text style={{ fontSize: 64 }}>🍳</Text>
+                </View>
+              )}
 
               {/* Close Button */}
               <TouchableOpacity 
@@ -115,7 +128,7 @@ export default function Recipes({ navigation }) {
 
               {/* Recipe Details */}
               <View style={styles.modalDetails}>
-                <Text style={styles.modalTitle}>{selectedRecipe.name}</Text>
+                <Text style={styles.modalTitle}>{selectedRecipe.name || 'Unknown Recipe'}</Text>
 
                 {/* Match Badge */}
                 {selectedRecipe.matchPercentage !== undefined && (
@@ -130,53 +143,61 @@ export default function Recipes({ navigation }) {
                 <View style={styles.infoRow}>
                   <View style={styles.infoItem}>
                     <Text style={styles.infoLabel}>⏱️ Time</Text>
-                    <Text style={styles.infoValue}>{selectedRecipe.time}</Text>
+                    <Text style={styles.infoValue}>{selectedRecipe.time || 'N/A'}</Text>
                   </View>
                   <View style={styles.infoItem}>
                     <Text style={styles.infoLabel}>📊 Difficulty</Text>
-                    <Text style={styles.infoValue}>{selectedRecipe.difficulty}</Text>
+                    <Text style={styles.infoValue}>{selectedRecipe.difficulty || 'N/A'}</Text>
                   </View>
                   <View style={styles.infoItem}>
                     <Text style={styles.infoLabel}>🔥 Calories</Text>
-                    <Text style={styles.infoValue}>{selectedRecipe.calories}</Text>
+                    <Text style={styles.infoValue}>{selectedRecipe.calories || 'N/A'}</Text>
                   </View>
                 </View>
 
                 {/* Ingredients */}
                 <Text style={styles.sectionTitle}>Ingredients</Text>
                 <View style={styles.ingredientsList}>
-                  {selectedRecipe.ingredients.map((ingredient, index) => {
-                    const isAvailable = !selectedRecipe.missingIngredients?.includes(ingredient);
-                    return (
-                      <View key={index} style={styles.ingredientItem}>
-                        <Text style={styles.ingredientItemEmoji}>
-                          {getIngredientEmoji(ingredient)}
-                        </Text>
-                        <Text style={[
-                          styles.ingredientItemText,
-                          !isAvailable && styles.missingIngredient
-                        ]}>
-                          {ingredient}
-                        </Text>
-                        {!isAvailable && (
-                          <Text style={styles.missingTag}>Missing</Text>
-                        )}
-                      </View>
-                    );
-                  })}
+                  {Array.isArray(selectedRecipe.ingredients) && selectedRecipe.ingredients.length > 0 ? (
+                    selectedRecipe.ingredients.map((ingredient, index) => {
+                      const isAvailable = !selectedRecipe.missingIngredients?.includes(ingredient);
+                      return (
+                        <View key={index} style={styles.ingredientItem}>
+                          <Text style={styles.ingredientItemEmoji}>
+                            {getIngredientEmoji(ingredient || '')}
+                          </Text>
+                          <Text style={[
+                            styles.ingredientItemText,
+                            !isAvailable && styles.missingIngredient
+                          ]}>
+                            {ingredient || 'Unknown'}
+                          </Text>
+                          {!isAvailable && (
+                            <Text style={styles.missingTag}>Missing</Text>
+                          )}
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <Text style={styles.emptyText}>No ingredients listed</Text>
+                  )}
                 </View>
 
                 {/* Instructions */}
                 <Text style={styles.sectionTitle}>Instructions</Text>
                 <View style={styles.instructionsList}>
-                  {selectedRecipe.instructions.map((instruction, index) => (
-                    <View key={index} style={styles.instructionItem}>
-                      <View style={styles.instructionNumber}>
-                        <Text style={styles.instructionNumberText}>{index + 1}</Text>
+                  {Array.isArray(selectedRecipe.instructions) && selectedRecipe.instructions.length > 0 ? (
+                    selectedRecipe.instructions.map((instruction, index) => (
+                      <View key={index} style={styles.instructionItem}>
+                        <View style={styles.instructionNumber}>
+                          <Text style={styles.instructionNumberText}>{index + 1}</Text>
+                        </View>
+                        <Text style={styles.instructionText}>{instruction || 'No instruction'}</Text>
                       </View>
-                      <Text style={styles.instructionText}>{instruction}</Text>
-                    </View>
-                  ))}
+                    ))
+                  ) : (
+                    <Text style={styles.emptyText}>No instructions available</Text>
+                  )}
                 </View>
               </View>
             </ScrollView>
@@ -196,13 +217,14 @@ export default function Recipes({ navigation }) {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>🍳 Recipe Recommendations</Text>
@@ -226,20 +248,24 @@ export default function Recipes({ navigation }) {
             showsHorizontalScrollIndicator={false}
             style={styles.inventoryScroll}
           >
-            {inventory.slice(0, 8).map((item, index) => (
-              <View key={index} style={styles.inventoryChip}>
-                <Text style={styles.inventoryChipEmoji}>
-                  {getIngredientEmoji(typeof item === 'object' ? item.name : item)}
-                </Text>
-                <Text style={styles.inventoryChipText}>
-                  {typeof item === 'object' ? item.name : item}
-                </Text>
-                <View style={[
-                  styles.inventoryChipDot,
-                  { backgroundColor: getInventoryStatusColor(item) }
-                ]} />
-              </View>
-            ))}
+            {inventory.slice(0, 8).map((item, index) => {
+              if (!item) return null;
+              const itemName = typeof item === 'object' ? (item.name || 'Unknown') : (item || 'Unknown');
+              return (
+                <View key={index} style={styles.inventoryChip}>
+                  <Text style={styles.inventoryChipEmoji}>
+                    {getIngredientEmoji(itemName)}
+                  </Text>
+                  <Text style={styles.inventoryChipText}>
+                    {itemName}
+                  </Text>
+                  <View style={[
+                    styles.inventoryChipDot,
+                    { backgroundColor: getInventoryStatusColor(item) }
+                  ]} />
+                </View>
+              );
+            })}
           </ScrollView>
         ) : (
           <Text style={styles.emptyInventory}>
@@ -259,13 +285,16 @@ export default function Recipes({ navigation }) {
 
         {recommendedRecipes.length > 0 ? (
           <>
-            {recommendedRecipes.map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                onPress={() => setSelectedRecipe(recipe)}
-              />
-            ))}
+            {recommendedRecipes.map((recipe) => {
+              if (!recipe || !recipe.id) return null;
+              return (
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  onPress={() => setSelectedRecipe(recipe)}
+                />
+              );
+            })}
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -294,13 +323,16 @@ export default function Recipes({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {allRecipes.map((recipe) => (
-            <RecipeCard
-              key={recipe.id}
-              recipe={recipe}
-              onPress={() => setSelectedRecipe(recipe)}
-            />
-          ))}
+          {allRecipes.map((recipe) => {
+            if (!recipe || !recipe.id) return null;
+            return (
+              <RecipeCard
+                key={recipe.id}
+                recipe={recipe}
+                onPress={() => setSelectedRecipe(recipe)}
+              />
+            );
+          })}
         </View>
       )}
 
@@ -320,14 +352,25 @@ export default function Recipes({ navigation }) {
 
       {/* Bottom Spacer for Tab Bar */}
       <View style={{ height: 130 }} />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.backgroundSolid,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSolid,
+  },
+  emptyText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    padding: spacing.md,
   },
   scrollContent: {
     paddingBottom: 130,

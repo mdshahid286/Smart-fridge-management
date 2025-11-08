@@ -6,6 +6,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../theme';
 import { getInventory, testConnection } from '../api';
@@ -41,10 +42,13 @@ export default function Dashboard({ navigation }) {
     try {
       setLoading(true);
       const data = await getInventory();
-      setInventory(data);
-      calculateStats(data);
+      const safeData = Array.isArray(data) ? data : [];
+      setInventory(safeData);
+      calculateStats(safeData);
     } catch (error) {
       console.error('Error fetching inventory:', error);
+      setInventory([]);
+      calculateStats([]);
     } finally {
       setLoading(false);
     }
@@ -58,12 +62,25 @@ export default function Dashboard({ navigation }) {
   };
 
   const calculateStats = (data) => {
+    if (!Array.isArray(data)) {
+      setStats({
+        total: 0,
+        categories: {},
+        lowStock: 0,
+        inStock: 0,
+        expiring: 0,
+      });
+      return;
+    }
+
     const categories = {};
     let lowStock = 0;
     let inStock = 0;
     let expiring = 0;
 
     data.forEach(item => {
+      if (!item) return; // Skip invalid items
+      
       // Count by category
       const cat = item.category || 'Other';
       categories[cat] = (categories[cat] || 0) + 1;
@@ -103,13 +120,14 @@ export default function Dashboard({ navigation }) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       {/* Header with minimal status */}
       <View style={styles.header}>
         <View>
@@ -261,11 +279,16 @@ export default function Dashboard({ navigation }) {
 
       {/* Bottom Spacer for Tab Bar */}
       <View style={{ height: 130 }} />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.backgroundSolid,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSolid,

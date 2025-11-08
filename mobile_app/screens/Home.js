@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  SafeAreaView,
 } from "react-native";
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from "../theme";
 import { getInventory, testConnection, API_URL } from "../api";
@@ -30,9 +31,15 @@ export default function Home({ navigation }) {
 
   const checkConnection = async () => {
     try {
-      await testConnection();
-      setConnectionStatus('connected');
+      const result = await testConnection();
+      // Check if connection was successful
+      if (result?.status === 'ok' || result?.status === 'connected') {
+        setConnectionStatus('connected');
+      } else {
+        setConnectionStatus('disconnected');
+      }
     } catch (error) {
+      console.error('Connection check error:', error);
       setConnectionStatus('disconnected');
     }
   };
@@ -40,14 +47,23 @@ export default function Home({ navigation }) {
   const fetchRecentData = async () => {
     try {
       const items = await getInventory();
-      setDetectedItems(items.slice(0, 8));
+      // Safe array operations
+      const safeItems = Array.isArray(items) ? items : [];
+      setDetectedItems(safeItems.slice(0, 8));
       setCaptureStats({
-        total: items.length,
-        today: items.filter((item) => item.status?.includes('Detected')).length,
-        lastDetection: items.length > 0 ? new Date() : null,
+        total: safeItems.length,
+        today: safeItems.filter((item) => item?.status?.includes('Detected')).length,
+        lastDetection: safeItems.length > 0 ? new Date() : null,
       });
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Set safe defaults on error
+      setDetectedItems([]);
+      setCaptureStats({
+        total: 0,
+        today: 0,
+        lastDetection: null,
+      });
     }
   };
 
@@ -77,12 +93,13 @@ export default function Home({ navigation }) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>📷 ESP32-CAM Monitor</Text>
@@ -263,11 +280,16 @@ export default function Home({ navigation }) {
 
       {/* Bottom Spacer for Tab Bar */}
       <View style={{ height: 130 }} />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.backgroundSolid,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSolid,

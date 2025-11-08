@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Switch,
+  SafeAreaView,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../theme';
 import { USE_MOCK_DATA, API_URL } from '../api';
@@ -58,7 +59,8 @@ export default function Settings({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Profile Header */}
       <View style={styles.header}>
         <View style={styles.avatar}>
@@ -189,14 +191,22 @@ export default function Settings({ navigation }) {
 
       {/* Spacer for bottom tab */}
       <View style={{ height: 130 }} />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.backgroundSolid,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSolid,
+  },
+  content: {
+    paddingBottom: 130,
   },
   header: {
     alignItems: 'center',

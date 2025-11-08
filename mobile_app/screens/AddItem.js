@@ -7,8 +7,10 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  SafeAreaView,
 } from "react-native";
-import { API_URL, addInventoryItem } from "../api";
+import { colors, spacing, fontSize, fontWeight, borderRadius } from "../theme";
+import { addInventoryItem } from "../api";
 
 export default function AddItem({ navigation }) {
   const [name, setName] = useState("");
@@ -50,7 +52,8 @@ export default function AddItem({ navigation }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>➕ Add New Item</Text>
 
       <Text style={styles.label}>Item Name *</Text>
@@ -91,53 +94,59 @@ export default function AddItem({ navigation }) {
       >
         <Text style={styles.buttonText}>❌ Cancel</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.backgroundSolid,
+  },
   container: {
-    padding: 25,
-    backgroundColor: "#fff",
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
     flexGrow: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.bold,
     textAlign: "center",
-    marginBottom: 30,
-    color: "#333",
+    marginBottom: spacing.xl,
+    color: colors.textPrimary,
   },
   label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 15,
-    marginBottom: 5,
-    color: "#444",
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    color: colors.textPrimary,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "#f9f9f9",
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fontSize.md,
+    backgroundColor: colors.cardSolid,
+    color: colors.textPrimary,
   },
   button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 30,
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.xl,
     alignItems: "center",
   },
   cancelButton: {
-    backgroundColor: "#FF3B30",
-    marginTop: 10,
+    backgroundColor: colors.error,
+    marginTop: spacing.sm,
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: colors.textWhite,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
   },
 });
 
