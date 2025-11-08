@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from detect_items import detect_objects
+from image_utils import validate_image, get_image_info
 import os
 import json
 from datetime import datetime
@@ -55,14 +56,39 @@ def upload():
         file.save(filepath)
         print(f"[SUCCESS] Image saved to: {filepath}")
         
+        # Validate image
+        is_valid, error_message = validate_image(filepath)
+        if not is_valid:
+            print(f"[ERROR] Image validation failed: {error_message}")
+            return jsonify({"error": f"Invalid image: {error_message}"}), 400
+        
+        # Get image information
+        image_info = get_image_info(filepath)
+        file_size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
+        
+        if image_info:
+            print(f"[INFO] Image dimensions: {image_info['width']}x{image_info['height']}")
+            print(f"[INFO] Image size: {image_info['file_size_kb']} KB")
+            print(f"[INFO] Image sharpness: {image_info['sharpness']}")
+            print(f"[INFO] Image brightness: {image_info['brightness']}")
+        
         # 🧠 Run YOLO object detection
         print("[DETECTION] Running YOLOv8 detection...")
         
         # Get detection parameters from request (optional)
         min_confidence = float(request.form.get('min_confidence', 0.25))
         filter_food = request.form.get('filter_food', 'true').lower() == 'true'
+        enable_preprocessing = request.form.get('preprocess', 'true').lower() == 'true'
+        save_annotated = request.form.get('save_annotated', 'false').lower() == 'true'
         
-        detected_items = detect_objects(filepath, min_confidence=min_confidence, filter_food=filter_food)
+        # Run detection with enhanced settings
+        detected_items = detect_objects(
+            filepath, 
+            min_confidence=min_confidence, 
+            filter_food=filter_food,
+            enable_preprocessing=enable_preprocessing,
+            save_annotated=save_annotated
+        )
         print(f"[DETECTION] Detected {len(detected_items)} items")
         
         # Add status and timestamp to each item
@@ -80,7 +106,18 @@ def upload():
         return jsonify({
             "message": "Items detected successfully", 
             "items": detected_items,
-            "detected_items": detected_items  # Support both formats
+            "detected_items": detected_items,  # Support both formats
+            "total_detected": len(detected_items),
+            "detection_summary": {
+                "total_items": len(detected_items),
+                "total_quantity": sum(item.get('quantity', 1) for item in detected_items),
+                "categories": list(set(item.get('category', 'other') for item in detected_items))
+            },
+            "image_info": {
+                "filename": filename,
+                "filepath": filepath,
+                "size_kb": round(file_size / 1024, 2) if 'file_size' in locals() else 0
+            }
         })
         
     except Exception as e:
