@@ -20,13 +20,17 @@ export default function Recipes({ navigation }) {
   const [inventory, setInventory] = useState([]);
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
   const [allRecipes, setAllRecipes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [showAllRecipes, setShowAllRecipes] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    // Don't block initial render - make API calls after component mounts
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const fetchData = async () => {

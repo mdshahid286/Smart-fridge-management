@@ -45,14 +45,19 @@ export default function Inventory({ navigation }) {
   };
 
   useEffect(() => {
-    // Load data on initial mount
-    fetchInventory();
+    // Don't block initial render - make API calls after component mounts
+    const timer = setTimeout(() => {
+      fetchInventory();
+    }, 100);
     
     // Also load when screen comes into focus
     const unsubscribe = navigation.addListener("focus", () => {
       fetchInventory();
     });
-    return unsubscribe;
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, [navigation]);
 
   useEffect(() => {

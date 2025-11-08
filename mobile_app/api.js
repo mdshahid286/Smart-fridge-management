@@ -34,16 +34,16 @@ export const testConnection = async () => {
   
   try {
     const response = await axios.get(`${API_URL}/`, {
-      timeout: 5000,
+      timeout: 3000, // Reduced timeout to 3 seconds
+      validateStatus: (status) => status < 500, // Don't throw on 4xx
     });
     console.log("✅ Backend connection successful:", response.data);
     return response.data || { message: "Connected", status: "ok" };
   } catch (error) {
-    console.error("❌ Backend connection failed:", {
-      message: error.message,
-      code: error.code,
-      url: API_URL,
-    });
+    // Don't log errors in production - just return error status
+    if (__DEV__) {
+      console.warn("⚠️ Backend connection failed (using mock data):", error.message);
+    }
     // Don't throw - return error status instead
     return { 
       message: "Connection failed", 
@@ -143,22 +143,26 @@ export const uploadImage = async (fileUri) => {
 export const getInventory = async () => {
   if (USE_MOCK_DATA) {
     console.log("📦 Returning mock inventory data");
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Faster mock response - don't simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 50));
     return Array.isArray(MOCK_INVENTORY) ? [...MOCK_INVENTORY] : [];
   }
   
   try {
     const response = await axios.get(`${API_URL}/inventory`, {
-      timeout: 10000,
+      timeout: 5000, // Reduced timeout to 5 seconds
+      validateStatus: (status) => status < 500,
     });
     // Ensure we return an array
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
-    console.error("❌ Fetch Inventory Error:", error.message);
-    // Return empty array instead of throwing to prevent app crashes
-    console.warn("⚠️ Falling back to empty inventory");
-    return [];
+    // Don't log errors - just fallback to mock data
+    if (__DEV__) {
+      console.warn("⚠️ Error fetching inventory (falling back to mock data):", error.message);
+    }
+    // Fallback to mock data if backend fails
+    console.log("📦 Falling back to mock data");
+    return Array.isArray(MOCK_INVENTORY) ? [...MOCK_INVENTORY] : [];
   }
 };
 

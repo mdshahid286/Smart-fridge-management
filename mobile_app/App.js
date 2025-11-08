@@ -1,11 +1,12 @@
 // mobile_app/App.js
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Text, View, StatusBar, Platform } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import ErrorBoundary from "./components/ErrorBoundary";
+import LoadingScreen from "./components/LoadingScreen";
 import { colors } from "./theme";
 
 // Screens
@@ -90,10 +91,29 @@ function InventoryStack() {
 
 // Main Tab Navigator
 export default function App() {
+  const [isReady, setIsReady] = useState(false);
+  
+  useEffect(() => {
+    // Initialize app quickly
+    console.log('🎯 App component rendering...');
+    const timer = setTimeout(() => {
+      setIsReady(true);
+      console.log('✅ App ready');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!isReady) {
+    return <LoadingScreen />;
+  }
+  
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <NavigationContainer>
+        <NavigationContainer
+          onReady={() => console.log('✅ Navigation ready')}
+          onStateChange={() => {}}
+        >
           <StatusBar 
             barStyle="dark-content" 
             backgroundColor="#E2E8F0"

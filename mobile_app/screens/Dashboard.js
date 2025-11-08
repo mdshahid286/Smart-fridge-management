@@ -14,7 +14,7 @@ import { getInventory, testConnection } from '../api';
 export default function Dashboard({ navigation }) {
   const [inventory, setInventory] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
@@ -25,8 +25,12 @@ export default function Dashboard({ navigation }) {
   });
 
   useEffect(() => {
-    checkConnection();
-    fetchData();
+    // Don't block initial render - make API calls after component mounts
+    const timer = setTimeout(() => {
+      checkConnection();
+      fetchData();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const checkConnection = async () => {

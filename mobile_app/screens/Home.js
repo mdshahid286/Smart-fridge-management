@@ -25,8 +25,12 @@ export default function Home({ navigation }) {
   });
 
   useEffect(() => {
-    checkConnection();
-    fetchRecentData();
+    // Don't block initial render - make API calls after component mounts
+    const timer = setTimeout(() => {
+      checkConnection();
+      fetchRecentData();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const checkConnection = async () => {
