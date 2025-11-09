@@ -1,7 +1,8 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include <WebServer.h>
+// Optional: Uncomment to parse JSON responses (requires ArduinoJson library)
+// #include <ArduinoJson.h>
 
 // Camera model
 #define CAMERA_MODEL_AI_THINKER
@@ -12,9 +13,6 @@
 const char *ssid = "YOUR_WIFI_SSID";           // Replace with your WiFi name
 const char *password = "YOUR_WIFI_PASSWORD";    // Replace with your WiFi password
 const char *serverUrl = "http://10.79.192.126:5000/upload";  // Flask backend server IP (update if different)
-
-// Web server for streaming
-WebServer server(80);
 
 // Settings
 const unsigned long CAPTURE_INTERVAL = 30000;  // Capture every 30 seconds (adjust as needed)
@@ -50,51 +48,12 @@ bool ensureWiFiConnected() {
   }
 }
 
-// Handle MJPEG streaming
-void handleStream() {
-  WiFiClient client = server.client();
-  String response = "HTTP/1.1 200 OK\r\n";
-  response += "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n";
-  server.sendContent(response);
-
-  while (client.connected()) {
-    camera_fb_t *fb = esp_camera_fb_get();
-    if (!fb) {
-      Serial.println("Camera capture failed");
-      break;
-    }
-
-    client.print("--frame\r\n");
-    client.print("Content-Type: image/jpeg\r\n\r\n");
-    client.write(fb->buf, fb->len);
-    client.print("\r\n");
-    
-    esp_camera_fb_return(fb);
-    delay(100); // ~10 FPS
-  }
-}
-
-// Handle root page (web interface)
-void handleRoot() {
-  String html = "<!DOCTYPE html><html><head>";
-  html += "<meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>";
-  html += "<title>ESP32-CAM Stream</title>";
-  html += "<style>";
-  html += "body{margin:0;padding:0;background:#000;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh;width:100vw;}";
-  html += "img{max-width:100%;max-height:100%;width:100%;height:auto;object-fit:contain;}";
-  html += "</style>";
-  html += "</head><body>";
-  html += "<img src='/stream' alt='Camera Stream' onerror='this.style.display=\"none\"'>";
-  html += "</body></html>";
-  server.send(200, "text/html", html);
-}
-
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
   delay(1000);
   
-  Serial.println("\n🚀 ESP32-CAM Smart Refrigerator with Streaming Initializing...");
+  Serial.println("\n🚀 ESP32-CAM Smart Refrigerator Initializing...");
   
   // Initialize WiFi
   WiFi.mode(WIFI_STA);
@@ -116,20 +75,8 @@ void setup() {
   Serial.println("\n✅ WiFi connected!");
   Serial.print("📡 IP Address: ");
   Serial.println(WiFi.localIP());
-  
-  // Print stream information clearly
-  Serial.println("\n==================================================");
-  Serial.println("📹 STREAMING INFORMATION:");
-  Serial.println("==================================================");
-  Serial.print("📡 Stream URL: http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/stream");
-  Serial.print("🌐 Web Page: http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/");
-  Serial.print("📤 Upload URL: ");
+  Serial.print("📡 Server URL: ");
   Serial.println(serverUrl);
-  Serial.println("==================================================\n");
 
   // Initialize camera
   camera_config_t config;
@@ -154,10 +101,10 @@ void setup() {
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
   
-  // Resolution for streaming and detection
-  config.frame_size = FRAMESIZE_VGA;  // 640x480 (good balance for streaming and detection)
-  config.jpeg_quality = 12;  // Slightly lower quality for streaming (12-63, lower = better)
-  config.fb_count = 2;  // Double buffer for streaming
+  // Higher resolution for better detection
+  config.frame_size = FRAMESIZE_VGA;  // 640x480 (better for object detection)
+  config.jpeg_quality = 10;  // Lower number = higher quality (10-63, 10 is best)
+  config.fb_count = 1;
 
   // Camera init with error handling
   esp_err_t err = esp_camera_init(&config);
@@ -172,26 +119,13 @@ void setup() {
   sensor_t *s = esp_camera_sensor_get();
   Serial.printf("📷 Camera sensor: %d\n", s->id.PID);
   
-  // Setup web server routes
-  server.on("/", handleRoot);
-  server.on("/stream", handleStream);
-  server.begin();
-  Serial.println("✅ Web server started for streaming!");
-  Serial.println("📹 Live stream is now available!");
-  Serial.print("👉 Access stream at: http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("/stream");
-  
   lastCaptureTime = millis();
   lastWiFiCheck = millis();
   
-  Serial.println("✅ Setup complete! Streaming available and capture loop started...\n");
+  Serial.println("✅ Setup complete! Starting capture loop...\n");
 }
 
 void loop() {
-  // Handle web server clients (for streaming) - MUST be called frequently
-  server.handleClient();
-  
   unsigned long currentTime = millis();
   
   // Check WiFi connection periodically
@@ -200,9 +134,9 @@ void loop() {
     lastWiFiCheck = currentTime;
   }
   
-  // Check if it's time to capture and upload to Flask backend
+  // Check if it's time to capture
   if (currentTime - lastCaptureTime < CAPTURE_INTERVAL) {
-    delay(100);  // Small delay to allow web server processing
+    delay(1000);  // Small delay to prevent tight loop
     return;
   }
   
@@ -213,9 +147,9 @@ void loop() {
     return;
   }
   
-  Serial.println("\n📸 Starting image capture for upload...");
+  Serial.println("\n📸 Starting image capture...");
   
-  // Capture image for upload (separate from stream)
+  // Capture image from camera
   camera_fb_t *fb = esp_camera_fb_get();
 
   if (!fb) {
@@ -306,6 +240,27 @@ bool uploadImage(camera_fb_t *fb) {
     
     String response = http.getString();
     Serial.println("📦 Response: " + response);
+    
+    // Try to parse JSON response (optional - requires ArduinoJson library)
+    // Uncomment if you have ArduinoJson installed
+    /*
+    if (httpResponseCode == 200) {
+      StaticJsonDocument<1024> doc;
+      DeserializationError error = deserializeJson(doc, response);
+      
+      if (!error) {
+        if (doc.containsKey("items")) {
+          JsonArray items = doc["items"];
+          Serial.printf("✅ Detected %d items:\n", items.size());
+          for (JsonObject item : items) {
+            if (item.containsKey("name")) {
+              Serial.printf("  - %s\n", item["name"].as<const char*>());
+            }
+          }
+        }
+      }
+    }
+    */
     
     http.end();
     return (httpResponseCode == 200);

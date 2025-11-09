@@ -25,6 +25,12 @@ export const API_URL = USE_ANDROID_EMULATOR
   ? "http://10.0.2.2:5000"  // Android Emulator special IP
   : "http://10.79.192.126:5000"; // Your machine's IP for Expo Go physical device
 
+// ESP32-CAM Streaming URL (update with your ESP32 IP address)
+// You'll get this from Serial Monitor after ESP32 connects
+// IMPORTANT: Use root URL (/) not /stream for WebView - the HTML page displays the stream
+// Format: http://ESP32_IP_ADDRESS/
+export const ESP32_STREAM_URL = "http://10.79.192.53/";  // Update this with your ESP32 IP (use root / not /stream)
+
 // 🧪 Test Backend Connection
 export const testConnection = async () => {
   if (USE_MOCK_DATA) {

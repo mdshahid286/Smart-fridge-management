@@ -9,15 +9,20 @@ import {
   RefreshControl,
   ActivityIndicator,
   SafeAreaView,
+  Dimensions,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from "../theme";
-import { getInventory, testConnection, API_URL } from "../api";
+import { getInventory, testConnection, API_URL, ESP32_STREAM_URL } from "../api";
 
 export default function Home({ navigation }) {
   const [connectionStatus, setConnectionStatus] = useState('checking');
   const [refreshing, setRefreshing] = useState(false);
   const [lastCapture, setLastCapture] = useState(null);
   const [detectedItems, setDetectedItems] = useState([]);
+  const [showStream, setShowStream] = useState(false);
+  const [streamUrl, setStreamUrl] = useState(ESP32_STREAM_URL);
+  const [streamError, setStreamError] = useState(false);
   const [captureStats, setCaptureStats] = useState({
     total: 0,
     today: 0,
@@ -120,9 +125,98 @@ export default function Home({ navigation }) {
         </View>
         <Text style={styles.statusHint}>
           {connectionStatus === 'connected'
-            ? 'Capturing every 10 seconds'
+            ? 'Capturing every 30 seconds'
             : 'Check backend connection'}
         </Text>
+      </View>
+
+      {/* Live Stream Section */}
+      <View style={styles.streamSection}>
+        <TouchableOpacity
+          style={[styles.streamButton, showStream && styles.streamButtonActive]}
+          onPress={() => setShowStream(!showStream)}
+        >
+          <Text style={styles.streamButtonText}>
+            {showStream ? '⏸️ Stop Stream' : '▶️ Start Live Stream'}
+          </Text>
+        </TouchableOpacity>
+        
+        {showStream && (
+          <View style={styles.streamContainer}>
+            {streamUrl.includes('YOUR_ESP32_IP') ? (
+              <View style={styles.streamErrorContainer}>
+                <Text style={styles.streamErrorText}>
+                  ⚠️ Please update ESP32_STREAM_URL in api.js
+                </Text>
+                <Text style={styles.streamErrorHint}>
+                  Get ESP32 IP from Serial Monitor and update the URL
+                </Text>
+              </View>
+            ) : (
+              <>
+                <WebView
+                  source={{ 
+                    uri: streamUrl.endsWith('/stream') 
+                      ? streamUrl.replace('/stream', '/') 
+                      : streamUrl.endsWith('/') 
+                        ? streamUrl 
+                        : streamUrl + '/'
+                  }}
+                  style={styles.streamView}
+                  scalesPageToFit={true}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  startInLoadingState={true}
+                  allowsInlineMediaPlayback={true}
+                  mediaPlaybackRequiresUserAction={false}
+                  mixedContentMode="always"
+                  originWhitelist={['*']}
+                  renderLoading={() => (
+                    <View style={styles.streamLoading}>
+                      <ActivityIndicator size="large" color={colors.primary} />
+                      <Text style={styles.streamLoadingText}>Loading stream...</Text>
+                    </View>
+                  )}
+                  onError={(syntheticEvent) => {
+                    const { nativeEvent } = syntheticEvent;
+                    console.error('WebView error: ', nativeEvent);
+                    setStreamError(true);
+                  }}
+                  onHttpError={(syntheticEvent) => {
+                    const { nativeEvent } = syntheticEvent;
+                    console.error('HTTP error: ', nativeEvent);
+                    setStreamError(true);
+                  }}
+                  onLoadStart={() => {
+                    setStreamError(false);
+                  }}
+                  onLoadEnd={() => {
+                    setStreamError(false);
+                  }}
+                />
+                {streamError && (
+                  <View style={styles.streamErrorOverlay}>
+                    <Text style={styles.streamErrorText}>
+                      ❌ Stream connection failed
+                    </Text>
+                    <Text style={styles.streamErrorHint}>
+                      Check ESP32 IP address and ensure it's on the same network
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.retryButton}
+                      onPress={() => {
+                        setStreamError(false);
+                        setShowStream(true);
+                      }}
+                    >
+                      <Text style={styles.retryButtonText}>🔄 Retry</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Capture Statistics */}
@@ -233,11 +327,17 @@ export default function Home({ navigation }) {
         <View style={styles.settingsCard}>
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel}>Capture Interval:</Text>
-            <Text style={styles.settingValue}>10 seconds</Text>
+            <Text style={styles.settingValue}>30 seconds</Text>
           </View>
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Image Quality:</Text>
-            <Text style={styles.settingValue}>QVGA (320×240)</Text>
+            <Text style={styles.settingLabel}>Stream Resolution:</Text>
+            <Text style={styles.settingValue}>640×480 (VGA)</Text>
+          </View>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Stream URL:</Text>
+            <Text style={styles.settingValue} numberOfLines={1}>
+              {streamUrl.replace('http://', '').replace('/stream', '')}
+            </Text>
           </View>
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel}>Detection Model:</Text>
@@ -567,5 +667,81 @@ const styles = StyleSheet.create({
     color: colors.textWhite,
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
+  },
+  streamSection: {
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  streamButton: {
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  streamButtonActive: {
+    backgroundColor: colors.error,
+  },
+  streamButtonText: {
+    color: colors.textWhite,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+  },
+  streamContainer: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    height: 300,
+    ...shadows.sm,
+  },
+  streamView: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  streamLoading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  streamLoadingText: {
+    color: colors.textWhite,
+    marginTop: spacing.md,
+    fontSize: fontSize.sm,
+  },
+  streamErrorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+    backgroundColor: colors.card,
+  },
+  streamErrorOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    padding: spacing.lg,
+  },
+  streamErrorText: {
+    color: colors.error,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  streamErrorHint: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    marginBottom: spacing.md,
   },
 });
